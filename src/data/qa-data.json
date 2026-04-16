@@ -1,0 +1,73 @@
+{
+  "qaPairs": [
+    {
+      "category": "Initial Greeting",
+      "question": "Hi",
+      "answer": "Hi — I can help you get started with Rescue Transit. Are you looking to foster, help transport, or learn how the platform works?"
+    },
+    {
+      "category": "Fosters",
+      "question": "How do I become a foster?",
+      "answer": "To become a foster, you'll need to create an account and submit a short application. Once approved, you'll be able to view animals needing temporary care and request placements."
+    },
+    {
+      "category": "Fosters",
+      "question": "What happens after I apply?",
+      "answer": "Most applications are reviewed within 24–48 hours. Once your application is reviewed, you will receive a notification regarding your status."
+    },
+    {
+      "category": "Fosters",
+      "question": "How do I receive an animal?",
+      "answer": "After approval, you can browse animals needing foster care on the platform. You can request a placement, and once the shelter confirms, the transport will be coordinated."
+    },
+    {
+      "category": "Drivers",
+      "question": "How do transports work?",
+      "answer": "Rescue Transit coordinates transport through volunteer drivers. Transports are broken into segments, and volunteers sign up for specific legs of the journey."
+    },
+    {
+      "category": "Drivers",
+      "question": "Do I have to drive long distances?",
+      "answer": "No. Most drivers help with short segments—often just 1–2 hours. You can choose transports that fit your schedule and preferred distance."
+    },
+    {
+      "category": "Drivers",
+      "question": "How do I sign up to help transport?",
+      "answer": "You can register as a driver on the platform. Once your profile is ready, you can view available transport legs in your area and claim the ones you are available for."
+    },
+    {
+      "category": "Shelters",
+      "question": "How do I post an animal?",
+      "answer": "Registered shelters can log in to their dashboard to create a listing for an animal, including photos, medical needs, and destination requirements."
+    },
+    {
+      "category": "Shelters",
+      "question": "How are transports coordinated?",
+      "answer": "The platform automatically calculates the best route and breaks it into manageable segments for volunteer drivers to claim."
+    },
+    {
+      "category": "Shelters",
+      "question": "How does vet approval work?",
+      "answer": "Animals must have the necessary health certificates and vet clearances uploaded to the platform before transport can be finalized to ensure the safety of all animals involved."
+    },
+    {
+      "category": "General",
+      "question": "What is Rescue Transit?",
+      "answer": "Rescue Transit is a platform that connects shelters, fosters, and transport drivers to move animals from overcrowded shelters to places where they have capacity."
+    },
+    {
+      "category": "General",
+      "question": "How does this platform work?",
+      "answer": "It acts as a coordination hub that helps track animal movement, manage foster placements, and match volunteer drivers with transport needs to save more lives."
+    },
+    {
+      "category": "Safety & Trust",
+      "question": "Is the platform safe?",
+      "answer": "Yes. All participants, including fosters, drivers, and shelters, are reviewed to help ensure safe and responsible placements and transport for animals."
+    }
+  ],
+  "fallbacks": {
+    "medical_approval_placement": "For that, please contact the shelter or support team.",
+    "unsure_outofscope": "I'm not sure about that, but I can connect you with the right information. You can contact support at smckearin@gmail.com"
+  }
+}
