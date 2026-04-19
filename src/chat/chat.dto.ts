@@ -54,3 +54,31 @@ export class ConversationHistoryDto {
     timestamp: string;
   }>;
 }
+
+export class UserConversationSummaryDto {
+  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'The conversation ID' })
+  conversationId: string;
+
+  @ApiProperty({ example: 'user-123', description: 'The user ID' })
+  userId: string;
+
+  @ApiProperty({ example: '2024-04-15T17:20:00Z', description: 'When the conversation was created' })
+  createdAt: string;
+
+  @ApiProperty({ example: '2024-04-15T17:45:00Z', description: 'Timestamp of the latest message from this user in the conversation' })
+  lastMessageAt: string;
+
+  @ApiProperty({ example: 4, description: 'Number of messages this user has in the conversation' })
+  messageCount: number;
+}
+
+export class DeleteConversationResponseDto {
+  @ApiProperty({ example: 'Conversation deleted for user user-123' })
+  message: string;
+
+  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'The conversation ID' })
+  conversationId: string;
+
+  @ApiProperty({ example: 'user-123', description: 'The user ID' })
+  userId: string;
+}

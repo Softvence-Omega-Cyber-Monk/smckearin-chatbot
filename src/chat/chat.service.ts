@@ -20,6 +20,14 @@ interface ConversationData {
   messages: ConversationMessage[];
 }
 
+export interface UserConversationSummary {
+  conversationId: string;
+  userId: string;
+  createdAt: string;
+  lastMessageAt: string;
+  messageCount: number;
+}
+
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
@@ -123,6 +131,77 @@ export class ChatService {
     } catch (error) {
       this.logger.error(`Error loading conversation ${conversationId}: ${error.message}`);
       return null;
+    }
+  }
+
+  getUserConversations(userId: string): UserConversationSummary[] {
+    try {
+      const conversationFiles = fs
+        .readdirSync(this.conversationsDir)
+        .filter(file => file.endsWith('.json'));
+
+      const conversations = conversationFiles
+        .map(file => {
+          const conversationPath = path.join(this.conversationsDir, file);
+          const data = fs.readFileSync(conversationPath, 'utf-8');
+          const conversation: ConversationData = JSON.parse(data);
+          const userMessages = conversation.messages.filter(msg => msg.userId === userId);
+
+          if (userMessages.length === 0) {
+            return null;
+          }
+
+          const lastMessageAt = userMessages[userMessages.length - 1].timestamp;
+
+          return {
+            conversationId: conversation.conversationId,
+            userId,
+            createdAt: conversation.createdAt,
+            lastMessageAt,
+            messageCount: userMessages.length,
+          };
+        })
+        .filter((conversation): conversation is UserConversationSummary => conversation !== null)
+        .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+
+      return conversations;
+    } catch (error) {
+      this.logger.error(`Error loading conversations for user ${userId}: ${error.message}`);
+      return [];
+    }
+  }
+
+  deleteUserConversation(conversationId: string, userId: string): boolean {
+    try {
+      const conversationPath = path.join(this.conversationsDir, `${conversationId}.json`);
+      if (!fs.existsSync(conversationPath)) {
+        this.logger.warn(`Conversation not found for deletion: ${conversationId}`);
+        return false;
+      }
+
+      const data = fs.readFileSync(conversationPath, 'utf-8');
+      const conversation: ConversationData = JSON.parse(data);
+      const remainingMessages = conversation.messages.filter(msg => msg.userId !== userId);
+
+      if (remainingMessages.length === conversation.messages.length) {
+        this.logger.warn(`No messages found for user ${userId} in conversation ${conversationId}`);
+        return false;
+      }
+
+      if (remainingMessages.length === 0) {
+        fs.unlinkSync(conversationPath);
+        return true;
+      }
+
+      this.saveConversation(conversationId, {
+        ...conversation,
+        messages: remainingMessages,
+      });
+
+      return true;
+    } catch (error) {
+      this.logger.error(`Error deleting conversation ${conversationId} for user ${userId}: ${error.message}`);
+      return false;
     }
   }
 

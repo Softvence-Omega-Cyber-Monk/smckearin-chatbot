@@ -1,7 +1,13 @@
-import { Body, Controller, Get, Param, Post, BadRequestException, NotFoundException, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Delete, BadRequestException, NotFoundException, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { ChatService } from './chat.service';
-import { SendMessageDto, ChatResponseDto, ConversationHistoryDto } from './chat.dto';
+import {
+  SendMessageDto,
+  ChatResponseDto,
+  ConversationHistoryDto,
+  UserConversationSummaryDto,
+  DeleteConversationResponseDto,
+} from './chat.dto';
 
 @Controller('chat')
 @ApiTags('Chat')
@@ -74,5 +80,59 @@ export class ChatController {
     
     return result;
   }
-}
 
+  @Get('users/:userId/conversations')
+  @ApiOperation({
+    summary: 'Get all conversations for a user',
+    description: 'Retrieve all conversations that contain messages from the specified user.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved the user conversation list',
+    type: UserConversationSummaryDto,
+    isArray: true,
+  })
+  async getUserConversations(@Param('userId') userId: string) {
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
+    }
+
+    return this.chatService.getUserConversations(userId);
+  }
+
+  @Delete('users/:userId/conversations/:conversationId')
+  @ApiOperation({
+    summary: 'Delete a conversation for a user',
+    description: 'Delete the specified user’s messages from a conversation. If no messages remain, the conversation file is removed.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully deleted the conversation for the user',
+    type: DeleteConversationResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Conversation not found for this user' })
+  async deleteUserConversation(
+    @Param('userId') userId: string,
+    @Param('conversationId') conversationId: string,
+  ) {
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
+    }
+
+    if (!conversationId) {
+      throw new BadRequestException('Conversation ID is required');
+    }
+
+    const deleted = this.chatService.deleteUserConversation(conversationId, userId);
+
+    if (!deleted) {
+      throw new NotFoundException(`Conversation with ID ${conversationId} not found for user ${userId}`);
+    }
+
+    return {
+      message: `Conversation deleted for user ${userId}`,
+      conversationId,
+      userId,
+    };
+  }
+}
