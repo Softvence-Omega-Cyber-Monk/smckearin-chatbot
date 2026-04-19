@@ -3,20 +3,29 @@ import { ConfigService } from '@nestjs/config';
 import { VectorStoreService } from '../vector-store/vector-store.service';
 import { v4 as uuidv4 } from 'uuid';
 import OpenAI from 'openai';
+import * as fs from 'fs';
+import * as path from 'path';
 
-interface ConversationMessage {
+export interface ConversationMessage {
   id: string;
+  userId: string;
   message: string;
   response: string;
   timestamp: string;
 }
 
+interface ConversationData {
+  conversationId: string;
+  createdAt: string;
+  messages: ConversationMessage[];
+}
+
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
-  private conversations: Map<string, ConversationMessage[]> = new Map();
   private readonly openai?: OpenAI;
   private readonly embeddingModel: string;
+  private readonly conversationsDir: string;
 
   constructor(
     private readonly vectorStore: VectorStoreService,
@@ -27,10 +36,18 @@ export class ChatService {
       this.openai = new OpenAI({ apiKey });
     }
     this.embeddingModel = this.configService.get<string>('openai.embeddingModel') || 'text-embedding-3-small';
+    
+    // Initialize conversations directory for persistent storage
+    this.conversationsDir = path.join(process.cwd(), 'conversations');
+    if (!fs.existsSync(this.conversationsDir)) {
+      fs.mkdirSync(this.conversationsDir, { recursive: true });
+      this.logger.log(`Created conversations directory at ${this.conversationsDir}`);
+    }
   }
 
-  async sendMessage(message: string): Promise<{ conversationId: string; message: string; response: string; timestamp: string }> {
-    const conversationId = uuidv4();
+  async sendMessage(message: string, conversationId?: string, userId?: string): Promise<{ conversationId: string; userId: string; message: string; response: string; timestamp: string }> {
+    const finalConversationId = conversationId || uuidv4();
+    const finalUserId = userId || 'anonymous';
     const timestamp = new Date().toISOString();
 
     try {
@@ -38,21 +55,21 @@ export class ChatService {
       const response = await this.generateResponse(message);
 
       // Store message in conversation history
-      if (!this.conversations.has(conversationId)) {
-        this.conversations.set(conversationId, []);
-      }
-
-      this.conversations.get(conversationId)!.push({
+      const conversationData = this.loadConversation(finalConversationId);
+      conversationData.messages.push({
         id: uuidv4(),
+        userId: finalUserId,
         message,
         response,
         timestamp,
       });
 
-      this.logger.log(`Message sent: ${message}`);
+      this.saveConversation(finalConversationId, conversationData);
+      this.logger.log(`Message sent: ${message} (Conversation: ${finalConversationId}, User: ${finalUserId})`);
 
       return {
-        conversationId,
+        conversationId: finalConversationId,
+        userId: finalUserId,
         message,
         response,
         timestamp,
@@ -60,8 +77,21 @@ export class ChatService {
     } catch (error) {
       this.logger.error(`Error generating response: ${error.message}`);
       const fallbackResponse = this.getFallbackResponse(message);
+      
+      // Still store the fallback response
+      const conversationData = this.loadConversation(finalConversationId);
+      conversationData.messages.push({
+        id: uuidv4(),
+        userId: finalUserId,
+        message,
+        response: fallbackResponse,
+        timestamp,
+      });
+      this.saveConversation(finalConversationId, conversationData);
+
       return {
-        conversationId,
+        conversationId: finalConversationId,
+        userId: finalUserId,
         message,
         response: fallbackResponse,
         timestamp,
@@ -69,13 +99,65 @@ export class ChatService {
     }
   }
 
-  getResponse(conversationId: string): { conversationId: string; messages: any[] } {
-    const messages = this.conversations.get(conversationId) || [];
+  getConversationHistory(conversationId: string, userId?: string): { conversationId: string; createdAt: string; messages: ConversationMessage[] } | null {
+    try {
+      const conversationPath = path.join(this.conversationsDir, `${conversationId}.json`);
+      if (!fs.existsSync(conversationPath)) {
+        this.logger.warn(`Conversation not found: ${conversationId}`);
+        return null;
+      }
 
-    return {
-      conversationId,
-      messages,
-    };
+      const data = fs.readFileSync(conversationPath, 'utf-8');
+      const conversation: ConversationData = JSON.parse(data);
+      
+      // Filter messages by userId if provided
+      const filteredMessages = userId 
+        ? conversation.messages.filter(msg => msg.userId === userId)
+        : conversation.messages;
+
+      return {
+        conversationId: conversation.conversationId,
+        createdAt: conversation.createdAt,
+        messages: filteredMessages,
+      };
+    } catch (error) {
+      this.logger.error(`Error loading conversation ${conversationId}: ${error.message}`);
+      return null;
+    }
+  }
+
+  private loadConversation(conversationId: string): ConversationData {
+    try {
+      const conversationPath = path.join(this.conversationsDir, `${conversationId}.json`);
+      
+      if (fs.existsSync(conversationPath)) {
+        const data = fs.readFileSync(conversationPath, 'utf-8');
+        return JSON.parse(data);
+      }
+
+      // Create new conversation
+      return {
+        conversationId,
+        createdAt: new Date().toISOString(),
+        messages: [],
+      };
+    } catch (error) {
+      this.logger.error(`Error loading conversation ${conversationId}: ${error.message}`);
+      return {
+        conversationId,
+        createdAt: new Date().toISOString(),
+        messages: [],
+      };
+    }
+  }
+
+  private saveConversation(conversationId: string, data: ConversationData): void {
+    try {
+      const conversationPath = path.join(this.conversationsDir, `${conversationId}.json`);
+      fs.writeFileSync(conversationPath, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (error) {
+      this.logger.error(`Error saving conversation ${conversationId}: ${error.message}`);
+    }
   }
 
   private async generateResponse(message: string): Promise<string> {
